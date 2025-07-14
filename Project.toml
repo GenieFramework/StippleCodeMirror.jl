@@ -23,6 +23,7 @@ Genie = "5"
 OhMyREPL = "0.5"
 Stipple = "0.31"
 StippleUI = "0.24.11"
+julia = "1.6"
 
 [extras]
 OhMyREPL = "5fb14364-9ced-5910-84b2-373655c76a03"

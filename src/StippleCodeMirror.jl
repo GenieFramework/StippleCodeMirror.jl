@@ -2,17 +2,20 @@ module StippleCodeMirror
 
 using Stipple, Stipple.ReactiveTools
 using StippleUI
-using OhMyREPL
-using OhMyREPL.JuliaSyntax
-using OhMyREPL.Crayons
 using Colors
+using Crayons
 
 import Stipple.opts
 import Genie: Assets.add_fileroute, Assets.asset_path, Router.Route, Router._routes
 
-export highlight, local_codemirror_deps, local_mode_deps, codemirror_deps, mode_deps, codemirror, EditorMixin
+export codemirror, highlight, codemirror_deps, mode_deps, external_codemirror_deps, external_mode_deps, EditorMixin
 
 Stipple.render(c::Colorant) = "#$(hex(c, :auto))"
+
+const assets_config = Genie.Assets.AssetsConfig(package = "StippleCodeMirror.jl")
+
+include("codemirror.vue.jl")
+
 
 const COLOR_16_MAPPING = Dict(
     0 => colorant"#000000",
@@ -32,10 +35,6 @@ const COLOR_16_MAPPING = Dict(
     66 => colorant"#80ffff",
     67 => colorant"#ffffff",
 )
-
-const assets_config = Genie.Assets.AssetsConfig(package = "StippleCodeMirror.jl")
-
-include("codemirror.vue.jl")
 
 function index_to_rgb(index::Integer)
     0 < index < 255 || throw(ArgumentError("Index must be between 0 and 255"))
@@ -57,6 +56,12 @@ function index_to_rgb(index::Integer)
     end
 end
 
+function cm_index(i, inds)
+    line = findlast(i .>= inds)
+    c = i - inds[line]
+    opts(line = line - 1, ch = c - 1)
+end
+
 function ansicolor_to_rgb(c::Crayons.ANSIColor; default = RGB(1, 1, 1))
     c.active || return RGB(0, 0, 0)
     if c.style == Crayons.COLORS_256
@@ -72,47 +77,15 @@ end
 
 ansicolor_to_rgb(c::Crayon; default = RGB(1, 1, 1)) = ansicolor_to_rgb(c.fg; default)
 
-function cm_index(i, inds)
-    line = findlast(i .>= inds)
-    c = i - inds[line]
-    opts(line = line - 1, ch = c - 1)
+function highlight(x)
+    @warn "You have to load 'OhMyREPL' before using this function."
+    opts(css = "", tokens = opts(lineNumber = true))
 end
-
-function highlight(str::Union{String, IOBuffer}, rpc::OhMyREPL.PassHandler = OhMyREPL.PASS_HANDLER, cursorpos::Int = 1, cursormovement::Bool = false; indent::Int = 0)
-    tokens = tokenize(str)
-    inds = pushfirst!(findall('\n', str), 0)
-
-    OhMyREPL.apply_passes!(rpc, tokens, str, cursorpos, cursormovement)
-    global cc = collect(rpc.accum_crayons)
-    colors = ansicolor_to_rgb.(cc, default = colorant"#123123")
-    all_colors = setdiff!(union(colors), [colorant"#123123"])
-    classes = "cm-" .* hex.(colors, :rrggbb)
-    css = join([".cm-$c { color: #$c}" for c in hex.(all_colors, :rrggbb)], " ")
-    tokens = [opts(
-        start = cm_index(first(t.range), inds),
-        var"end" = cm_index(last(t.range) + 1, inds),
-        className = c)
-        for (t, c) in zip(tokens, classes) if !isempty(t.range)
-    ]
-    opts(; css, tokens)
-end
-
-codemirror_deps() = [
-    script(src = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"),
-    stylesheet("https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css"),
-    script(vue_codemirror)
-]
-
-mode_deps() = [
-    script(src = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js")
-    script(src = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/julia/julia.min.js")
-    script(src = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js")
-]
 
 # definition of local routes and deps
 basedir = dirname(dirname(Base.find_package("StippleCodeMirror")))
 
-local_routes::Vector{Route} = [
+deps_routes::Vector{Route} = [
     add_fileroute(assets_config, "codemirror.min.js"; basedir),
     add_fileroute(assets_config, "codemirror.min.css"; basedir),
     add_fileroute(assets_config, "javascript/javascript.min.js"; basedir),
@@ -120,22 +93,34 @@ local_routes::Vector{Route} = [
     add_fileroute(assets_config, "python/python.min.js"; basedir),
 ]
 
-local_codemirror_deps() = [
+codemirror_deps() = [
     script(src = asset_path(assets_config, :js, file = "codemirror.min")),
     stylesheet(asset_path(assets_config, :css, file = "codemirror.min")),
     script(vue_codemirror)
 ]
 
-local_mode_deps() = [
+mode_deps() = [
     script(src = asset_path(assets_config, :js, file = "javascript/javascript.min")),
     script(src = asset_path(assets_config, :js, file = "julia/julia.min")),
     script(src = asset_path(assets_config, :js, file = "python/python.min"))
 ]
 
+external_codemirror_deps() = [
+    script(src = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"),
+    stylesheet("https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css"),
+    script(vue_codemirror)
+]
+
+external_mode_deps() = [
+    script(src = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js")
+    script(src = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/julia/julia.min.js")
+    script(src = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js")
+]
+
 function __init__()
     # @deps StippleCodeMirror codemirror_deps
     Stipple.register_global_components(StippleCodeMirror, "VueCodeMirror", legacy = true)
-    route.(local_routes)
+    route.(deps_routes)
 end
 
 function codemirror(code::Symbol;
@@ -153,8 +138,8 @@ end
     code = ""
     mode = "julia"
     options = opts(lineNumbers = true), READONLY
-    background::Union{String, Colorant} = "cm-dummy"
-    textcolor::Union{String, Colorant} = "cm-dummy"
+    background::Union{String, Colorant} = "#fff0"
+    textcolor::Union{String, Colorant} = "#000"
     highlights = opts(css = "", tokens = []), READONLY
 end
 

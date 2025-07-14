@@ -1,12 +1,9 @@
-#cd(dirname(@__DIR__))
-
 using StippleCodeMirror
 
 using Stipple, Stipple.ReactiveTools
 using StippleUI
 using OhMyREPL
 using Colors
-
 
 @app Editor begin
     @mixin EditorMixin(mode = "ohmyrepl")
@@ -36,15 +33,15 @@ end
     background = darkmode ? "#222" : "#fff"
 end
 
-@deps Editor local_codemirror_deps
-@deps Editor local_mode_deps
+@deps Editor codemirror_deps
+@deps Editor mode_deps
 
 ui() = row(cell(class = "st-module", [
     h3(class = "q-pb-lg", "Editor")
 
     Stipple.select(class = "q-pb-md", :colorscheme, "", options = :colorscheme_options, :standout, ref = "select")
 
-    codemirror(class = "bg-red",
+    codemirror(class = "bg-blue-1",
         :code,
         options = :options,
         mode = :mode,

@@ -35,19 +35,23 @@ Vue.component("VueCodeMirror", {
   mounted() {
     this.stylename = 'dynamic-cm-css-' + Math.floor(100000 + Math.random() * 900000);
     this.$nextTick(() => {
-      this.options.mode = this.mode
-      this.editor = CodeMirror(this.$refs.editorContainer, {
-        ...this.options,
-        value: this.modelValue,
-      });
-      // Update the v-model when the content changes
-      this.editor.on('change', (instance) => {
-        const content = instance.getValue();
-        this.$emit('update:modelValue', content);
-      });
+        this.options.mode = this.mode
+        this.editor = CodeMirror(this.$refs.editorContainer, {
+            ...this.options,
+            value: this.modelValue,
+        });
+        // Update the v-model when the content changes
+        this.editor.on('change', (instance) => {
+            const content = instance.getValue();
+            this.$emit('update:modelValue', content);
+        });
     });
   },
   methods: {
+    clearHighlights: function() {
+        const marks = this.editor.getAllMarks();
+        marks.forEach(mark => mark.clear());
+    },
     applyHighlights: function(tokens) {
         tokens.forEach(({ start, end, className }) => {
            this.editor.markText(start, end, { className });
@@ -70,6 +74,7 @@ Vue.component("VueCodeMirror", {
         document.head.appendChild(style); // Append the style to the head
     },
     highlight: function(data) {
+        this.clearHighlights()
         this.applyStylesheet(data.css)
         this.applyHighlights(data.tokens)
     }

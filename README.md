@@ -2,6 +2,29 @@
 
 Embedding CodeMirror instances in Stipple.
 
+#### Exports
+
+`codemirror()`:
+
+* `mode`: the language for highlighting (out of the box support for Julia (CodeMirror and Ohmyrepl), Javascript and Python. In order to activate OhMyREPL coloring make sure you have loaded OhMyREPL and set the mode `mode = "ohmyrepl"`
+* `background` (default: transparent): the background color as js color (e.g. `#fff0` or `#333`). If transparent, the background is determined by the style or class of the codemirror component
+* `textcolor` (default: black)
+* `options`: default: `OrderedDict(:lineNumbers = true)`: CodeMirror options
+* `highlights`: Dictionary of css and tokens, calculated via `highlight(code)` for custom highlighting
+
+`codemirror_deps()`, `external_codemirror_deps()`, `mode_deps()`, `external_mode_deps()`:
+
+* dependencies to be added to the app, e.g. `@deps mode_deps`, see CodeMirrorDemo.jl
+
+`highlight(code::Union{AbstractString, IO)`:
+
+- `code` to be highlighted
+- return value: highlights dictionary with css and tokens to be applied by CodeMirror, e.g. `highlights = highlight(code)`
+
+`EditorMixin()`:
+
+* Mixin to easily implement an editor into an app, see CodeMirrorDemo.jl
+
 ### CodeMirror Demo
 
 ```julia
@@ -66,13 +89,7 @@ up(open_browser = true)
 
 ```
 
-The following parameters can be set via `codemirror()`:
-
-- `mode`: the language for highlighting (out of the box support for Julia (CodeMirror and Ohmyrepl), Javascript and Python. In order to activate OhMyRepl coloring, enter `mode = "ohmyrepl"`
-- `background` (default: transparent): the background color as js color (e.g. #333)
-- `textcolor` (default: black)
-- `options`: default: `OrderedDict(:lineNumbers = true)`: CodeMirror options
-- `highlights`: Dictionary of css and tokens, calculated via `highlight(code)` for custom highlighting
+#### Sample image
 
 ![demo](docs/img/demo.png)
 

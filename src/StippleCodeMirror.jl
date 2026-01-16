@@ -83,7 +83,7 @@ function highlight(x)
 end
 
 # definition of local routes and deps
-basedir = dirname(dirname(Base.find_package("StippleCodeMirror")))
+basedir = dirname(@__DIR__)
 
 deps_routes::Vector{Route} = [
     add_fileroute(assets_config, "codemirror.min.js"; basedir),

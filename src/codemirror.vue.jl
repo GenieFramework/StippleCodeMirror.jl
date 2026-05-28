@@ -1,6 +1,6 @@
 vue_codemirror = js"""
 Vue.component("VueCodeMirror", {
-    data: () => ({ resizeObserver: null }),    
+    data: () => ({ resizeObserver: null, positionTimer: null, settingPosition: false }),    
     template: `
         <div ref="editorContainer"></div>
     `,
@@ -40,6 +40,10 @@ Vue.component("VueCodeMirror", {
             type: String,
             default: ''
         },
+        position: {
+            type: Object,
+            default: () => ({ line: 0, ch: 0, scrollTop: 0, scrollLeft: 0 })
+        },
     },
     mounted() {
         this.stylename = 'dynamic-cm-css-' + Math.floor(100000 + Math.random() * 900000);
@@ -54,6 +58,35 @@ Vue.component("VueCodeMirror", {
                 const content = instance.getValue();
                 this.$emit('update:modelValue', content);
             });
+            // Emit position changes when cursor moves or scroll changes
+            this.editor.on('cursorActivity', () => {
+                this.emitPosition();
+            });
+            this.editor.on('scroll', () => {
+                this.emitPosition();
+            });
+            // Set initial position if provided
+            if (this.position && (this.position.line || this.position.scrollTop)) {
+                this.$nextTick(() => {
+                    this.settingPosition = true;
+
+                    const lineCount = this.editor.lineCount();
+                    const targetLine = Math.min(Math.max(0, this.position.line || 0), lineCount - 1);
+                    const lineLength = this.editor.getLine(targetLine)?.length || 0;
+                    const targetCh = Math.min(Math.max(0, this.position.ch || 0), lineLength);
+
+                    this.editor.setCursor({ line: targetLine, ch: targetCh });
+
+                    // If scrollTop is set, use it, otherwise scroll to cursor
+                    if (this.position.scrollTop) {
+                        this.editor.scrollTo(this.position.scrollLeft || 0, this.position.scrollTop);
+                    } else {
+                        this.editor.scrollIntoView({ line: targetLine, ch: targetCh }, 100);
+                    }
+
+                    setTimeout(() => { this.settingPosition = false; }, 50);
+                });
+            }
             this.resizeObserver = new ResizeObserver(entries => {
                 for (let entry of entries) {
                     const height = entry.contentRect.height;
@@ -95,6 +128,22 @@ Vue.component("VueCodeMirror", {
             this.clearHighlights()
             this.applyStylesheet(data.css)
             this.applyHighlights(data.tokens)
+        },
+        emitPosition: function() {
+            if (this.settingPosition || !this.editor) return;
+
+            // Debounce to avoid too many updates
+            clearTimeout(this.positionTimer);
+            this.positionTimer = setTimeout(() => {
+                const cursor = this.editor.getCursor();
+                const scroll = this.editor.getScrollInfo();
+                this.$emit('update:position', {
+                    line: cursor.line,
+                    ch: cursor.ch,
+                    scrollTop: scroll.top,
+                    scrollLeft: scroll.left
+                });
+            }, 100);
         }
     },
     watch: {
@@ -126,6 +175,48 @@ Vue.component("VueCodeMirror", {
             deep: true,
             handler(newHighlights) {
                 this.highlight(newHighlights);
+            }
+        },
+        position: {
+            deep: true,
+            handler(pos) {
+                if (!this.editor || !pos || this.settingPosition) return;
+
+                // Only set position if it actually changed
+                const currentCursor = this.editor.getCursor();
+                const currentScroll = this.editor.getScrollInfo();
+
+                const cursorChanged = pos.line !== undefined &&
+                    (pos.line !== currentCursor.line || (pos.ch || 0) !== currentCursor.ch);
+                const scrollChanged = pos.scrollTop !== undefined &&
+                    (pos.scrollTop !== currentScroll.top || (pos.scrollLeft || 0) !== currentScroll.left);
+
+                if (!cursorChanged && !scrollChanged) return;
+
+                this.settingPosition = true;
+
+                if (cursorChanged) {
+                    // Validate line number
+                    const lineCount = this.editor.lineCount();
+                    const targetLine = Math.min(Math.max(0, pos.line), lineCount - 1);
+
+                    // Validate ch (limit to line length)
+                    const lineLength = this.editor.getLine(targetLine)?.length || 0;
+                    const targetCh = Math.min(Math.max(0, pos.ch || 0), lineLength);
+
+                    this.editor.setCursor({ line: targetLine, ch: targetCh });
+
+                    // Scroll to cursor if no explicit scroll position is set
+                    if (!scrollChanged) {
+                        this.editor.scrollIntoView({ line: targetLine, ch: targetCh }, 100);
+                    }
+                }
+
+                if (scrollChanged) {
+                    this.editor.scrollTo(pos.scrollLeft || 0, pos.scrollTop);
+                }
+
+                setTimeout(() => { this.settingPosition = false; }, 50);
             }
         }
     },

@@ -129,9 +129,31 @@ function codemirror(code::Symbol;
     textcolor::Union{Symbol, AbstractString, Colorant} = "#000",
     background::Union{Symbol, AbstractString, Colorant} = "#fff0",
     highlights::Union{Symbol, AbstractString, AbstractDict{Symbol, Any}, Colorant} = opts(css = "", tokens = OrderedDict{Symbol, Any}[]),
+    position::Union{Symbol, AbstractString, AbstractDict} = :position,
     kwargs...
 )
-    vue(:code__mirror; var"v-model" = code, mode, options, background, textcolor, highlights, mergemappings = false, kwargs...)
+    # Build the arguments dict with proper v-model binding for position
+    args = Dict{Symbol, Any}(
+        Symbol("v-model") => code,
+        :mode => mode,
+        :options => options,
+        :background => background,
+        :textcolor => textcolor,
+        :highlights => highlights,
+        :mergemappings => false
+    )
+
+    # Add position with v-model binding if it's a Symbol
+    if position isa Symbol
+        args[Symbol("v-model:position")] = position
+    else
+        args[:position] = position
+    end
+
+    # Merge with additional kwargs
+    merge!(args, kwargs)
+
+    vue(:code__mirror; args...)
 end
 
 @define_mixin EditorMixin begin
@@ -141,6 +163,7 @@ end
     background::Union{String, Colorant} = "#fff0"
     textcolor::Union{String, Colorant} = "#000"
     highlights = opts(css = "", tokens = []), READONLY
+    position = opts(line = 0, ch = 0, scrollTop = 0, scrollLeft = 0)
 end
 
 end # module

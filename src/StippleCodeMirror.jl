@@ -1,18 +1,18 @@
 module StippleCodeMirror
 
-using Stipple, Stipple.ReactiveTools
+using Stipple, Stipple.ReactiveTools, Stipple.Genie
 using StippleUI
 using Colors
 using Crayons
 
 import Stipple.opts
-import Genie: Assets.add_fileroute, Assets.asset_path, Router.Route, Router._routes
+import Stipple.Genie: Assets.add_fileroute, Assets.asset_path, Router.Route, Router._routes
 
 export codemirror, highlight, codemirror_deps, mode_deps, external_codemirror_deps, external_mode_deps, EditorMixin
 
 Stipple.render(c::Colorant) = "#$(hex(c, :auto))"
 
-const assets_config = Genie.Assets.AssetsConfig(package = "StippleCodeMirror.jl")
+const assets_config = Stipple.Genie.Assets.AssetsConfig(package = "StippleCodeMirror.jl")
 
 include("codemirror.vue.jl")
 

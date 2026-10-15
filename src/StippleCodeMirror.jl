@@ -85,13 +85,15 @@ end
 # definition of local routes and deps
 basedir = dirname(@__DIR__)
 
-deps_routes::Vector{Route} = [
-    add_fileroute(assets_config, "codemirror.min.js"; basedir),
-    add_fileroute(assets_config, "codemirror.min.css"; basedir),
-    add_fileroute(assets_config, "javascript/javascript.min.js"; basedir),
-    add_fileroute(assets_config, "julia/julia.min.js"; basedir),
-    add_fileroute(assets_config, "python/python.min.js"; basedir),
-]
+function deps_routes()
+    for filename in [
+        "codemirror.min.js", "codemirror.min.css",
+        "javascript/javascript.min.js", "julia/julia.min.js", "python/python.min.js"
+    ]
+        add_fileroute(assets_config, filename; basedir)
+    end
+    nothing
+end
 
 codemirror_deps() = [
     script(src = asset_path(assets_config, :js, file = "codemirror.min")),
@@ -120,7 +122,7 @@ external_mode_deps() = [
 function __init__()
     # @deps StippleCodeMirror codemirror_deps
     Stipple.register_global_components(StippleCodeMirror, "VueCodeMirror", legacy = true)
-    route.(deps_routes)
+    deps_routes()
 end
 
 function codemirror(code::Symbol;
